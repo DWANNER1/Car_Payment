@@ -1,26 +1,9 @@
 import { useMemo, useState } from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  MenuItem,
-  Stack,
-  Step,
-  StepLabel,
-  Stepper,
-  TextField,
-  Typography
-} from '@mui/material';
+import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, Step, StepLabel, Stepper, TextField } from '@mui/material';
 import { useRoLookup } from '../../hooks/useRoLookup';
-import {
-  useCreateTerminalSale,
-  useCreateTokenSale,
-  useFinalizePayment
-} from '../../hooks/usePaymentMutations';
+import { useCreateTerminalSale, useCreateTokenSale, useFinalizePayment } from '../../hooks/usePaymentMutations';
+import { ReceiptPreviewCard } from './ReceiptPreviewCard';
+import type { ReceiptPreview } from '../../../shared/payment';
 
 const steps = ['Confirm RO', 'Select Method', 'Terminal or Token', 'Finalize'];
 
@@ -35,7 +18,6 @@ export function PaymentStepperModal({ open }: { open: boolean }) {
 
   const roLookup = useRoLookup(roQuery);
   const repairOrder = roLookup.data?.[0];
-
   const terminalSale = useCreateTerminalSale();
   const tokenSale = useCreateTokenSale();
   const finalizePayment = useFinalizePayment();
@@ -45,14 +27,19 @@ export function PaymentStepperModal({ open }: { open: boolean }) {
     return method === 'credit' ? Number((base * 1.03).toFixed(2)) : base;
   }, [repairOrder, method]);
 
+  const receipt: ReceiptPreview | null = repairOrder ? {
+    roNumber: repairOrder.ro_number,
+    customerName: repairOrder.customer_name,
+    amountBase: repairOrder.totalAmountDue,
+    amountTotal,
+    flow: method,
+    reference: gatewayTransactionId || 'pending-gateway-id'
+  } : null;
+
   const canContinue = useMemo(() => {
     if (activeStep === 0) return Boolean(repairOrder && repairOrder.status === 'open');
     if (activeStep === 1) return Boolean(method);
-    if (activeStep === 2) {
-      return method === 'terminal' || method === 'credit'
-        ? tpn.trim().length >= 3
-        : token.trim().length >= 6;
-    }
+    if (activeStep === 2) return method === 'terminal' || method === 'credit' ? tpn.trim().length >= 3 : token.trim().length >= 6;
     return true;
   }, [activeStep, method, repairOrder, token, tpn]);
 
@@ -60,39 +47,22 @@ export function PaymentStepperModal({ open }: { open: boolean }) {
 
   const handlePrimary = async () => {
     if (activeStep < 2) {
-      setActiveStep((step) => Math.min(step + 1, steps.length - 1));
+      setActiveStep((s) => Math.min(s + 1, steps.length - 1));
       return;
     }
-
     if (activeStep === 2 && repairOrder) {
       if (method === 'terminal' || method === 'credit') {
-        const result = await terminalSale.mutateAsync({
-          roNumber: repairOrder.ro_number,
-          tpn,
-          amount: amountTotal
-        });
+        const result = await terminalSale.mutateAsync({ roNumber: repairOrder.ro_number, tpn, amount: amountTotal });
         setGatewayTransactionId(result.transactionId);
       } else {
-        const result = await tokenSale.mutateAsync({
-          roNumber: repairOrder.ro_number,
-          cardToken: token,
-          amount: amountTotal,
-          description: `RO ${repairOrder.ro_number}`
-        });
+        const result = await tokenSale.mutateAsync({ roNumber: repairOrder.ro_number, cardToken: token, amount: amountTotal, description: `RO ${repairOrder.ro_number}` });
         setGatewayTransactionId(result.transactionId);
       }
-
       setActiveStep(3);
       return;
     }
-
     if (activeStep === 3 && repairOrder) {
-      await finalizePayment.mutateAsync({
-        roNumber: repairOrder.ro_number,
-        authCode: 'AUTH-STUB',
-        finalAmount: amountTotal,
-        gatewayTransactionId: gatewayTransactionId || 'pending-gateway-id'
-      });
+      await finalizePayment.mutateAsync({ roNumber: repairOrder.ro_number, authCode: 'AUTH-STUB', finalAmount: amountTotal, gatewayTransactionId: gatewayTransactionId || 'pending-gateway-id' });
       setFinalized(true);
     }
   };
@@ -102,29 +72,14 @@ export function PaymentStepperModal({ open }: { open: boolean }) {
       <DialogTitle>Payment Stepper</DialogTitle>
       <DialogContent>
         <Stack spacing={3} sx={{ mt: 1 }}>
-          <Stepper activeStep={activeStep}>
-            {steps.map((label) => (
-              <Step key={label}>
-                <StepLabel>{label}</StepLabel>
-              </Step>
-            ))}
-          </Stepper>
-
+          <Stepper activeStep={activeStep}>{steps.map((label) => <Step key={label}><StepLabel>{label}</StepLabel></Step>)}</Stepper>
           {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
-          {finalized && <Alert severity="success">Payment finalized and ready for DMS write-back tracking.</Alert>}
+          {finalized && <Alert severity="success">Payment finalized and receipt actions are available below.</Alert>}
 
           {activeStep === 0 && (
             <Stack spacing={2}>
-              <TextField
-                label="Repair Order Number"
-                value={roQuery}
-                onChange={(e) => setRoQuery(e.target.value)}
-              />
-              {repairOrder && (
-                <Alert severity={repairOrder.status === 'open' ? 'success' : 'warning'}>
-                  RO {repairOrder.ro_number} • {repairOrder.customer_name} • Base amount ${repairOrder.totalAmountDue}
-                </Alert>
-              )}
+              <TextField label="Repair Order Number" value={roQuery} onChange={(e) => setRoQuery(e.target.value)} />
+              {repairOrder && <Alert severity={repairOrder.status === 'open' ? 'success' : 'warning'}>RO {repairOrder.ro_number} • {repairOrder.customer_name} • Base amount ${repairOrder.totalAmountDue}</Alert>}
             </Stack>
           )}
 
@@ -141,34 +96,18 @@ export function PaymentStepperModal({ open }: { open: boolean }) {
 
           {activeStep === 2 && (
             <Stack spacing={2}>
-              {method === 'terminal' || method === 'credit' ? (
-                <TextField label="Terminal TPN" value={tpn} onChange={(e) => setTpn(e.target.value)} helperText="Enter a valid terminal identifier." />
-              ) : (
-                <TextField label="Stored Card Token" value={token} onChange={(e) => setToken(e.target.value)} helperText="Token must be at least 6 characters." />
-              )}
+              {method === 'terminal' || method === 'credit'
+                ? <TextField label="Terminal TPN" value={tpn} onChange={(e) => setTpn(e.target.value)} helperText="Enter a valid terminal identifier." />
+                : <TextField label="Stored Card Token" value={token} onChange={(e) => setToken(e.target.value)} helperText="Token must be at least 6 characters." />}
             </Stack>
           )}
 
-          {activeStep === 3 && (
-            <Box>
-              <Typography variant="subtitle1">Receipt Preview</Typography>
-              <Typography color="text.secondary">
-                RO: {repairOrder?.ro_number ?? '--'} | Amount: ${amountTotal.toFixed(2)} | Flow: {method}
-              </Typography>
-              <Typography color="text.secondary">
-                Gateway transaction: {gatewayTransactionId || 'Pending'}
-              </Typography>
-            </Box>
-          )}
+          {activeStep === 3 && receipt && <ReceiptPreviewCard receipt={receipt} />}
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button disabled={activeStep === 0 || terminalSale.isPending || tokenSale.isPending || finalizePayment.isPending} onClick={() => setActiveStep((step) => step - 1)}>
-          Back
-        </Button>
-        <Button variant="contained" disabled={!canContinue || terminalSale.isPending || tokenSale.isPending || finalizePayment.isPending || finalized} onClick={handlePrimary}>
-          {activeStep === steps.length - 1 ? (finalized ? 'Completed' : 'Finalize') : 'Next'}
-        </Button>
+        <Button disabled={activeStep === 0 || terminalSale.isPending || tokenSale.isPending || finalizePayment.isPending} onClick={() => setActiveStep((s) => s - 1)}>Back</Button>
+        <Button variant="contained" disabled={!canContinue || terminalSale.isPending || tokenSale.isPending || finalizePayment.isPending || finalized} onClick={handlePrimary}>{activeStep === steps.length - 1 ? (finalized ? 'Completed' : 'Finalize') : 'Next'}</Button>
       </DialogActions>
     </Dialog>
   );

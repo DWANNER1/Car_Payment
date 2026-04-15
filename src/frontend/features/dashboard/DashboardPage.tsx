@@ -5,7 +5,6 @@ import { useMetrics } from '../../hooks/useMetrics';
 export function DashboardPage() {
   const health = useHealth();
   const metrics = useMetrics();
-
   const values = [
     { label: 'Today Sales', value: metrics.data?.todaySales ?? '--' },
     { label: 'Pending ROs', value: metrics.data?.pendingRos ?? '--' },
@@ -15,28 +14,11 @@ export function DashboardPage() {
 
   return (
     <Grid container spacing={2}>
-      <Grid item xs={12}>
-        <Typography variant="h4" gutterBottom>
-          Dashboard
-        </Typography>
-      </Grid>
-
-      <Grid item xs={12}>
-        <Alert severity={health.data?.ok ? 'success' : 'warning'}>
-          API status: {health.isLoading ? 'Checking...' : health.data?.ok ? 'Healthy' : 'Unavailable'}
-        </Alert>
-      </Grid>
-
+      <Grid item xs={12}><Typography variant="h4">Dashboard</Typography></Grid>
+      <Grid item xs={12}><Alert severity={health.data?.ok ? 'success' : 'warning'}>API status: {health.isLoading ? 'Checking...' : health.data?.ok ? 'Healthy' : 'Unavailable'}</Alert></Grid>
       {values.map((item) => (
         <Grid item xs={12} md={6} lg={3} key={item.label}>
-          <Card>
-            <CardContent>
-              <Typography variant="subtitle2" color="text.secondary">
-                {item.label}
-              </Typography>
-              <Typography variant="h5">{item.value}</Typography>
-            </CardContent>
-          </Card>
+          <Card><CardContent><Typography variant="subtitle2" color="text.secondary">{item.label}</Typography><Typography variant="h5">{item.value}</Typography></CardContent></Card>
         </Grid>
       ))}
     </Grid>

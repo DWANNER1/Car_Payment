@@ -18,4 +18,4 @@ describe('idempotency guard', () => {
     guard.reset();
     expect(guard.checkAndMark('txn-1')).toBe(false);
   });
-}
+});

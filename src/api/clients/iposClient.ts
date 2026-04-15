@@ -1,3 +1,7 @@
+import { demoModeService } from '../services/demoMode.js';
+
+let sequence = 1;
+
 export interface IposClient {
   getAuthToken(): Promise<{ accessToken: string; expiresIn: number }>;
   createTerminalSale(input: {
@@ -14,12 +18,12 @@ export interface IposClient {
 
 export const iposClient: IposClient = {
   async getAuthToken() {
-    return { accessToken: 'stub-token', expiresIn: 3600 };
+    return { accessToken: demoModeService.isEnabled() ? 'demo-token' : 'stub-token', expiresIn: 3600 };
   },
   async createTerminalSale() {
-    return { transactionId: 'stub-terminal-sale', status: 'accepted' };
+    return { transactionId: `${demoModeService.isEnabled() ? 'demo' : 'stub'}-terminal-${sequence++}`, status: 'accepted' };
   },
   async createRecurringSale() {
-    return { transactionId: 'stub-recurring-sale', status: 'accepted' };
+    return { transactionId: `${demoModeService.isEnabled() ? 'demo' : 'stub'}-token-${sequence++}`, status: 'accepted' };
   }
 };

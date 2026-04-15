@@ -13,6 +13,6 @@ Frontend expects the API at `/api`.
 
 ## Next implementation steps
 - Replace the starter routes with feature-complete pages
-- Connect the payment stepper to real API mutations
+- Connect the receipt actions to real email/text/print integrations
 - Add auth, route guards, and tenant-aware settings
-- Add receipt preview and finalization flows
+- Replace in-memory transaction state with database persistence

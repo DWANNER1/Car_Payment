@@ -16,3 +16,4 @@ Key screens:
 - Customers
 - Admin
 - Payment Stepper modal
+- Receipt preview actions

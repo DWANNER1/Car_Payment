@@ -25,9 +25,7 @@ export function useCreateTerminalSale() {
   return useMutation({
     mutationFn: (payload: TerminalSaleRequest) =>
       fetchJson<{ transactionId: string; status: string }>('/api/payments/terminal-sale', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       })
   });
 }
@@ -36,9 +34,7 @@ export function useCreateTokenSale() {
   return useMutation({
     mutationFn: (payload: TokenSaleRequest) =>
       fetchJson<{ transactionId: string; status: string }>('/api/payments/token-sale', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       })
   });
 }
@@ -47,9 +43,7 @@ export function useFinalizePayment() {
   return useMutation({
     mutationFn: (payload: FinalizePaymentRequest) =>
       fetchJson<{ ok: true }>('/api/payments/finalize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       })
   });
 }

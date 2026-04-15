@@ -2,13 +2,13 @@ import { z } from 'zod';
 
 export const terminalSaleSchema = z.object({
   roNumber: z.string().min(1),
-  tpn: z.string().min(1),
+  tpn: z.string().min(3),
   amount: z.number().positive()
 });
 
 export const tokenSaleSchema = z.object({
   roNumber: z.string().min(1),
-  cardToken: z.string().min(1),
+  cardToken: z.string().min(6),
   amount: z.number().positive(),
   description: z.string().min(1)
 });

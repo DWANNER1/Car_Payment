@@ -16,3 +16,4 @@ Key responsibilities:
 - iPOSpays auth, terminal sale, tokenization, void, refund
 - webhook validation and idempotency
 - policy enforcement for surcharge and batch cutoff
+- demo mode switching and sample-data generation

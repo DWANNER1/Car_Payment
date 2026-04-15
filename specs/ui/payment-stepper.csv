@@ -2,4 +2,4 @@ Step,Component,API/Logic,Block Condition
 1. Confirm RO,<ROLookupForm>,FETCH_RO → validate status=open,RO closed/invalid
 2. Select Method,<PaymentMethodSelector>,Calculates amount_total using surcharge_pct,None (preview only)
 3. Terminal/Token,<TerminalPing> or <StoredCardSelector>,C2D_SALE or RECURRING_SALE,TPN offline / token expired
-4. Finalize,<ReceiptPreview>,Webhook success → WRITE_BACK → update status=captured,Timeout/declined
+4. Finalize,<ReceiptPreviewCard>,WRITE_BACK and receipt actions,Timeout/declined

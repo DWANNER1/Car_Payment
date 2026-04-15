@@ -12,28 +12,15 @@ const navItems = [
 
 export function AppShell({ children }: PropsWithChildren) {
   const location = useLocation();
-
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
         <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Typography variant="h6" noWrap component="div">
-            Car Payment Portal
-          </Typography>
-          <Button color="inherit" component={Link} to="/payments/new">
-            New Payment
-          </Button>
+          <Typography variant="h6">Car Payment Portal</Typography>
+          <Button color="inherit" component={Link} to="/payments/new">New Payment</Button>
         </Toolbar>
       </AppBar>
-
-      <Drawer
-        variant="permanent"
-        sx={{
-          width: drawerWidth,
-          flexShrink: 0,
-          [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' }
-        }}
-      >
+      <Drawer variant="permanent" sx={{ width: drawerWidth, flexShrink: 0, [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' } }}>
         <Toolbar />
         <List>
           {navItems.map((item) => (
@@ -43,7 +30,6 @@ export function AppShell({ children }: PropsWithChildren) {
           ))}
         </List>
       </Drawer>
-
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <Toolbar />
         {children}

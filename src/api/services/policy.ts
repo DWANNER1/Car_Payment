@@ -1,7 +1,7 @@
 export interface OrgSettings {
   surcharge_pct: number;
   refund_surcharge: boolean;
-  auto_batch_time: string; // HH:mm
+  auto_batch_time: string;
 }
 
 export interface TransactionLike {

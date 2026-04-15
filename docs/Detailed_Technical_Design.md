@@ -69,8 +69,8 @@ Client Browser
 |---|---|---|
 | `/dashboard` | Live KPIs and recent activity | `<KpiGrid>`, `<SystemHealth>`, `<RecentTransactions>` |
 | `/transactions` | Historical ledger and reconciliation | `<DataGrid>`, export, retry post |
-| `/customers` | Card-on-file and recurring billing | `<TokenList>`, `<AddCardModal>`, `<DefaultSelector>` |
-| `/admin` | Policy and DMS configuration | `<SurchargeToggle>`, `<BatchTimePicker>`, `<DmsCredsForm>` |
+| `/customers` | Card-on-file and recurring billing | `<TokenList>`, `<AddCardModal>` |
+| `/admin` | Policy, demo mode, and DMS configuration | `<SurchargeToggle>`, `<BatchTimePicker>`, `<DemoModeSwitch>` |
 
 ### 4.3 Payment stepper state machine
 `idle → validating → processing → success | error | declined`
@@ -83,16 +83,6 @@ Client Browser
 | `FETCH_RO` | `GET` | `/repair-orders?search={query}` | Maps `totalAmountDue` to `amount_base`; returns `ro_number`, `vin`, `customer_name`, `status` |
 | `WRITE_BACK` | `POST` | `/accounting/journal-entry` | Sends `authCode`, `finalAmount`, `gateway_tx_id`; triggers RO closure |
 
-```ts
-export interface DmsFetchResponse {
-  ro_number: string;
-  vin: string;
-  customer_name: string;
-  totalAmountDue: number;
-  status: "open" | "closed";
-}
-```
-
 ### 5.2 iPOSpays v3 gateway commands
 | Command | Method | Purpose | Key Payload / Notes |
 |---|---|---|---|
@@ -103,13 +93,10 @@ export interface DmsFetchResponse {
 | `VOID` | `POST` | Pre-batch reversal | Allowed before `auto_batch_time` |
 | `REFUND` | `POST` | Post-batch return | Requires `refund_surcharge` policy toggle |
 
-### 5.3 Webhook listener
-- Endpoint: `POST /api/webhook/ipos`
-- Responsibilities:
-  - Validate signature
-  - Enforce idempotency using a unique transaction constraint
-  - Update transaction status in PostgreSQL
-  - Invalidate frontend cache and refresh affected views
+### 5.3 Demo mode
+- Toggleable from Admin
+- Generates sample repair orders, fake transaction IDs, and demo receipt data
+- Allows product demonstrations without payment or DMS credentials
 
 ## 6. Business Logic and Admin Controls
 
@@ -149,22 +136,15 @@ See `specs/database/schema.sql`.
 - Components: KPI grid, system health, recent transactions
 - Data source: TanStack Query polling `/api/v1/metrics`
 - Error handling: skeletons and retry toast on 5xx
-- KPI click action routes to filtered `/transactions`
 
 ### 8.2 Transactions (`/transactions`)
-- MUI `DataGrid` with server-side pagination, sorting, and filtering
-- Columns: RO#, Customer, Method, Base, Surcharge, Total, Status, DMS Posted, Date, Actions
-- Debounced search: 300 ms
-- Max 1000 rows per fetch
 - Actions: Export CSV, Retry DMS post, View receipt
 
 ### 8.3 Customers (`/customers`)
 - Components: `<TokenListTable>`, `<AddCardModal>`
-- Workflow: select/add card, complete FTD handshake, run `$0` pre-auth, save token, optionally mark as default
-- Security: mask tokens except brand and last4; keep iframe sandboxed and PCI compliant
 
 ### 8.4 Admin (`/admin`)
-- Tabs: Surcharge & Refund, Batch Schedule, DMS Credentials, Audit Log
+- Tabs: Surcharge & Refund, Batch Schedule, DMS Credentials, Audit Log, Demo Mode
 
 ### 8.5 Payment stepper modal
 | Step | Component | API / Logic | Block Condition |
@@ -172,7 +152,7 @@ See `specs/database/schema.sql`.
 | 1. Confirm RO | `<ROLookupForm>` | `FETCH_RO` → validate `status=open` | RO closed/invalid |
 | 2. Select Method | `<PaymentMethodSelector>` | Calculate `amount_total` using `surcharge_pct` | None |
 | 3. Terminal / Token | `<TerminalPing>` or `<StoredCardSelector>` | `C2D_SALE` or `RECURRING_SALE` | TPN offline / token expired |
-| 4. Finalize | `<ReceiptPreview>` | Webhook success → `WRITE_BACK` → `status=captured` | Timeout / declined |
+| 4. Finalize | `<ReceiptPreviewCard>` | `WRITE_BACK` + receipt actions | Timeout / declined |
 
 ## 9. Coding Agent Rules
 
@@ -193,16 +173,3 @@ See `specs/database/schema.sql`.
 4. Payment Stepper steps 1–3 with stubbed iPOSpays and DMS clients
 5. Webhook endpoint with signature verification and idempotency
 6. Admin settings UI with server-side policy enforcement
-
-## 11. Pre-Code Verification Checklist
-
-- Obtain iPOSpays v3 partner docs
-- Confirm FTD iframe origin and webhook signature algorithm
-- Obtain Fortellis/Cox API credentials
-- Verify exact `FETCH_RO` and `WRITE_BACK` payloads
-- Confirm surcharge legality by state and constrain admin ranges if needed
-- Provision Lightsail instance and verify services restart on reboot
-
-## 12. Codex Handoff Prompt
-
-Implement exactly as specified in this repository. Use TypeScript strict mode, Zod validation, and TanStack Query. Do not alter API contracts, webhook semantics, or the payment stepper state machine without approval. Keep the implementation single-instance ready for AWS Lightsail using Nginx, PM2, PostgreSQL, and Redis.
