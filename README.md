@@ -34,11 +34,12 @@ This starts:
 ## Current scaffold includes
 
 - root npm workspace
+- shared payment/receipt types package scaffold
 - Express API starter with modular routes and client stubs
-- Zod schemas for RO lookup and webhook payloads
+- Zod schemas for RO lookup, payment mutations, and webhook payloads
 - policy helper functions and starter Jest tests
 - React + Vite frontend starter with MUI and React Router
-- app shell, routed pages, and starter payment stepper modal
+- app shell, routed pages, payment stepper modal, and payment mutation hooks
 - Nginx and PM2 deployment templates
 - Lightsail setup script
 

@@ -6,7 +6,7 @@ Suggested layout:
 
 - `components/` — shared UI building blocks
 - `features/` — route-oriented modules
-- `hooks/` — `usePaymentFlow`, `useTokenManager`, `useDmsLookup`
+- `hooks/` — usePaymentFlow, useTokenManager, useDmsLookup
 - `store/` — Zustand slices
 - `lib/` — query client, API wrappers, utilities
 

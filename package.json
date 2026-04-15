@@ -4,7 +4,8 @@
   "private": true,
   "workspaces": [
     "src/api",
-    "src/frontend"
+    "src/frontend",
+    "src/shared"
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev -w src/api\" \"npm run dev -w src/frontend\"",
