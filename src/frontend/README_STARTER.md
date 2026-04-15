@@ -12,7 +12,7 @@ npm run dev
 Frontend expects the API at `/api`.
 
 ## Next implementation steps
-- Replace the plain starter shell with MUI layout
-- Add TanStack Query hooks
-- Add Dashboard, Transactions, Customers, and Admin routes
-- Add payment stepper flow
+- Replace the starter routes with feature-complete pages
+- Connect the payment stepper to real API mutations
+- Add auth, route guards, and tenant-aware settings
+- Add receipt preview and finalization flows

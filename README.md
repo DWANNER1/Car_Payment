@@ -12,7 +12,9 @@ This repo contains the technical design, API contracts, schema, starter code, an
 - `AGENTS.md` — instructions for Codex / coding agents
 - `.env.example` — local environment template
 - `src/api/app.ts` — modular Express app assembly
-- `src/frontend/App.tsx` — starter MUI app shell
+- `src/api/clients/` — partner API client stubs
+- `src/frontend/router.tsx` — app routing
+- `src/frontend/features/payments/PaymentStepperModal.tsx` — starter payment stepper
 - `specs/database/schema.sql` — PostgreSQL schema
 - `specs/contracts/ipos.ts` — iPOSpays request and webhook contracts
 - `specs/business/refund-policy.ts` — refund/surcharge business logic
@@ -32,11 +34,11 @@ This starts:
 ## Current scaffold includes
 
 - root npm workspace
-- Express API starter with modular routes
+- Express API starter with modular routes and client stubs
 - Zod schemas for RO lookup and webhook payloads
 - policy helper functions and starter Jest tests
-- React + Vite frontend starter
-- MUI app shell and starter feature pages
+- React + Vite frontend starter with MUI and React Router
+- app shell, routed pages, and starter payment stepper modal
 - Nginx and PM2 deployment templates
 - Lightsail setup script
 
