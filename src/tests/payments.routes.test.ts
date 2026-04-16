@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { createApp } from '../api/app';
+import { createApp } from '../api/app.js';
 
 describe('payment routes', () => {
   const app = createApp();
