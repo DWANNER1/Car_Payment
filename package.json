@@ -8,5 +8,7 @@
     "build": "npm run build -w src/api && npm run build -w src/frontend",
     "test": "npm run test -w src/api"
   },
-  "devDependencies": {"concurrently": "^9.1.2"}
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
 }

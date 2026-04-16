@@ -10,6 +10,17 @@ CREATE TABLE organizations (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+CREATE TABLE customer_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    dms_customer_id VARCHAR(100),
+    card_token TEXT NOT NULL,
+    last_four VARCHAR(4) NOT NULL,
+    card_brand VARCHAR(50),
+    is_default BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 CREATE TABLE transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,

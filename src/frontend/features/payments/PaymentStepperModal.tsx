@@ -2,5 +2,79 @@ import { useMemo, useState } from 'react';
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, Step, StepLabel, Stepper, TextField, Typography } from '@mui/material';
 import { ReceiptPreviewCard } from './ReceiptPreviewCard';
 import type { ReceiptPreview } from '../../../shared/payment';
-const steps=['Confirm RO','Select Method','Terminal or Token','Finalize'];
-export function PaymentStepperModal({open}:{open:boolean}){ const [activeStep,setActiveStep]=useState(0); const [method,setMethod]=useState<'terminal'|'token'|'credit'>('terminal'); const [departmentId,setDepartmentId]=useState('service'); const [routingMid,setRoutingMid]=useState('MID-SERVICE-DEMO'); const [paymentAmount,setPaymentAmount]=useState(120); const [gatewayTransactionId,setGatewayTransactionId]=useState('demo-terminal-1'); const amountBase=140; const amountSurcharge=method==='credit'?Number((paymentAmount*0.03).toFixed(2)):0; const amountTotal=paymentAmount+amountSurcharge; const amountRemaining=Math.max(0, amountBase-paymentAmount); const mixedRo=true; const receipt:ReceiptPreview={roNumber:'10001',customerName:'Demo Customer',amountBase,amountPaidNow:paymentAmount,amountRemaining,amountSurcharge,amountTotal,flow:method,reference:gatewayTransactionId,surchargeLabel:'Service Fee'}; return <Dialog open={open} fullWidth maxWidth='md'><DialogTitle>Payment Stepper</DialogTitle><DialogContent><Stack spacing={3} sx={{mt:1}}><Stepper activeStep={activeStep}>{steps.map(l=><Step key={l}><StepLabel>{l}</StepLabel></Step>)}</Stepper>{activeStep===0 && <Stack spacing={1}><Alert severity='success'>Mixed RO loaded with Parts and Service line items.</Alert><Typography color='text.secondary'>Parts: Brake Pads — $55</Typography><Typography color='text.secondary'>Service: Brake Labour — $85</Typography></Stack>}{activeStep===1 && <Stack spacing={2}><TextField select label='Payment Mode' value={method} onChange={(e)=>setMethod(e.target.value as any)}><MenuItem value='terminal'>Terminal</MenuItem><MenuItem value='token'>Stored Token</MenuItem><MenuItem value='credit'>Credit with Service Fee</MenuItem></TextField><TextField label='Payment Amount' type='number' value={paymentAmount} onChange={(e)=>setPaymentAmount(Number(e.target.value))} helperText='Supports partial payments.' /><TextField select label='Department' value={departmentId} onChange={(e)=>setDepartmentId(e.target.value)}><MenuItem value='parts'>Parts</MenuItem><MenuItem value='service'>Service</MenuItem></TextField>{mixedRo && <TextField label='Routing MID' value={routingMid} onChange={(e)=>setRoutingMid(e.target.value)} helperText='Default is Primary Service MID. Cashier may override before Charge.' />}<Alert severity='info'>Default mixed-RO tie-breaker is Service MID.</Alert></Stack>}{activeStep===2 && <Alert severity='info'>Charge will route to {routingMid}.</Alert>}{activeStep===3 && <ReceiptPreviewCard receipt={receipt} />}</Stack></DialogContent><DialogActions><Button disabled={activeStep===0} onClick={()=>setActiveStep(s=>s-1)}>Back</Button><Button variant='contained' onClick={()=>setActiveStep(s=>Math.min(s+1,3))}>{activeStep===3?'Done':'Next'}</Button></DialogActions></Dialog>; }
+
+const steps = ['Confirm RO', 'Select Method', 'Terminal or Token', 'Finalize'];
+
+export function PaymentStepperModal({ open }: { open: boolean }) {
+  const [activeStep, setActiveStep] = useState(0);
+  const [method, setMethod] = useState<'terminal' | 'token' | 'credit'>('terminal');
+  const [departmentId, setDepartmentId] = useState('service');
+  const [routingMid, setRoutingMid] = useState('MID-SERVICE-DEMO');
+  const [paymentAmount, setPaymentAmount] = useState(120);
+  const gatewayTransactionId = 'demo-terminal-1';
+
+  const amountBase = 140;
+  const amountSurcharge = useMemo(() => method === 'credit' ? Number((paymentAmount * 0.03).toFixed(2)) : 0, [method, paymentAmount]);
+  const amountTotal = paymentAmount + amountSurcharge;
+  const amountRemaining = Math.max(0, amountBase - paymentAmount);
+  const mixedRo = true;
+
+  const receipt: ReceiptPreview = {
+    roNumber: '10001',
+    customerName: 'Demo Customer',
+    amountBase,
+    amountPaidNow: paymentAmount,
+    amountRemaining,
+    amountSurcharge,
+    amountTotal,
+    flow: method,
+    reference: gatewayTransactionId,
+    surchargeLabel: 'Service Fee'
+  };
+
+  return (
+    <Dialog open={open} fullWidth maxWidth="md">
+      <DialogTitle>Payment Stepper</DialogTitle>
+      <DialogContent>
+        <Stack spacing={3} sx={{ mt: 1 }}>
+          <Stepper activeStep={activeStep}>{steps.map((label) => <Step key={label}><StepLabel>{label}</StepLabel></Step>)}</Stepper>
+
+          {activeStep === 0 && (
+            <Stack spacing={1}>
+              <Alert severity="success">Mixed RO loaded with Parts and Service line items.</Alert>
+              <Typography color="text.secondary">Parts: Brake Pads — $55</Typography>
+              <Typography color="text.secondary">Service: Brake Labour — $85</Typography>
+            </Stack>
+          )}
+
+          {activeStep === 1 && (
+            <Stack spacing={2}>
+              <TextField select label="Payment Mode" value={method} onChange={(e) => setMethod(e.target.value as 'terminal' | 'token' | 'credit')}>
+                <MenuItem value="terminal">Terminal</MenuItem>
+                <MenuItem value="token">Stored Token</MenuItem>
+                <MenuItem value="credit">Credit with Service Fee</MenuItem>
+              </TextField>
+              <TextField label="Payment Amount" type="number" value={paymentAmount} onChange={(e) => setPaymentAmount(Number(e.target.value))} helperText="Supports partial payments." />
+              <TextField select label="Department" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
+                <MenuItem value="parts">Parts</MenuItem>
+                <MenuItem value="service">Service</MenuItem>
+              </TextField>
+              {mixedRo && (
+                <TextField label="Routing MID" value={routingMid} onChange={(e) => setRoutingMid(e.target.value)} helperText="Default is Primary Service MID. Cashier may override before Charge." />
+              )}
+              <Alert severity="info">Default mixed-RO tie-breaker is Service MID.</Alert>
+            </Stack>
+          )}
+
+          {activeStep === 2 && <Alert severity="info">Charge will route to {routingMid}. Department scope: {departmentId}.</Alert>}
+
+          {activeStep === 3 && <ReceiptPreviewCard receipt={receipt} />}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button disabled={activeStep === 0} onClick={() => setActiveStep((step) => step - 1)}>Back</Button>
+        <Button variant="contained" onClick={() => setActiveStep((step) => Math.min(step + 1, 3))}>{activeStep === 3 ? 'Done' : 'Next'}</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
