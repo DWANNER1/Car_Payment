@@ -2,31 +2,21 @@
 
 Starter repository for a next-generation car payment portal.
 
-## Purpose
+## Included in this scaffold
+- DMS line-item aware RO fetch
+- Partial payment support
+- Partial refund scaffold
+- Demo mode for sales demos without live credentials
+- MID mapping admin scaffold
+- DMS sync exception reporting scaffold
+- Terminal heartbeat monitor scaffold
+- Receipt preview with print, email, and text demo actions
+- Mixed-RO routing rule: default to Service MID, cashier may override before charge
+- Force Post reconciliation path for failed DMS post scenarios
+- Explicit surcharge separation on receipt and DMS posting model
 
-This repo contains the technical design, API contracts, schema, starter code, and handoff notes needed for Codex or another coding agent to begin implementation.
-
-## Start Here
-
-- `docs/Detailed_Technical_Design.md` — primary implementation spec
-- `AGENTS.md` — instructions for Codex / coding agents
-- `src/api/app.ts` — modular Express app assembly
-- `src/api/routes/admin.ts` — admin settings and demo-mode API
-- `src/api/routes/metrics.ts` — dashboard metrics and sync exceptions scaffold
-- `src/frontend/features/payments/ReceiptPreviewCard.tsx` — printable/email/text receipt preview
-- `specs/database/schema.sql` — PostgreSQL schema
-
-## Current scaffold includes
-
-- demo mode with generated sample data
-- receipt preview actions
-- webhook idempotency starter
-- payment/DMS client stubs
-- admin controls including demo mode and MID mapping scaffold
-- DMS sync exception report scaffold
-- terminal heartbeat monitor scaffold
-- department-aware transaction data model
-
-## Notes
-
-Before coding against live systems, validate all iPOSpays and DMS contract details against official partner documentation.
+## Start here
+- `docs/Detailed_Technical_Design.md`
+- `specs/database/schema.sql`
+- `src/api/app.ts`
+- `src/frontend/features/payments/PaymentStepperModal.tsx`
