@@ -5,7 +5,7 @@
 
 ## 1. Goal
 
-Build a car payment portal that orchestrates DMS repair-order lookup, card-present and card-on-file payments through iPOSpays, webhook-driven transaction reconciliation, and admin-controlled surcharge/refund policies.
+Build a car payment portal that orchestrates DMS repair-order lookup, line-item aware payment decisions, card-present and card-on-file payments through iPOSpays, webhook-driven transaction reconciliation, and admin-controlled surcharge/refund/demo policies.
 
 ## 2. High-Level Architecture
 
@@ -16,160 +16,147 @@ Client Browser
    └─ /api/* → Proxies to localhost:3000 (Node.js)
                ├─ Express/NestJS API
                ├─ iPOSpays / DMS clients
+               ├─ Demo mode service + terminal heartbeat monitor
                └─ PostgreSQL (localhost:5432)
 ```
 
-### 2.1 Instance stack
-- Ubuntu 22.04 LTS
-- Nginx + Certbot for SSL termination
-- Node.js 20+ with Express or NestJS, managed by PM2
-- PostgreSQL 15
-- Redis 7 for light queue/cache workloads
-- Minimum suggested size: **Lightsail 4GB RAM / 2 vCPU**
+## 3. Key Functional Changes
 
-### 2.2 Single-instance tuning
-- `postgresql.conf`: `shared_buffers='1GB'`, `effective_cache_size='2GB'`, `work_mem='16MB'`
-- `pm2 ecosystem.config.js`: `exec_mode: "cluster"`, `instances: max`, `autorestart: true`
-- Use `systemd` for PostgreSQL and Redis
-- Nginx should auto-restart on boot
-- Daily backups with `pg_dump` plus Lightsail snapshots
+### 3.1 DMS Fetch Logic
+- `FETCH_RO` now returns a **line-item array**, not just a single total.
+- Each line item should include:
+  - `line_id`
+  - `description`
+  - `department_id`
+  - `department_name`
+  - `amount`
+  - `category` (`parts`, `service`, `body_shop`, etc.)
+- UI impact:
+  - Parts vs Service breakdown
+  - Department-aware reporting
+  - MID routing by department
 
-## 3. Project Structure
+### 3.2 Payment Logic
+- Add **partial payment** support.
+- A user can pay less than the full RO balance.
+- DMS remains `open` until the cumulative paid amount satisfies closure rules.
+- Receipt preview must show:
+  - original balance
+  - payment amount applied now
+  - remaining balance
 
-```text
-/src
-  /api          # Express routers, controllers, services
-  /db           # Prisma schema or raw SQL migrations
-  /frontend     # React + Vite + MUI
-    /components # Shared UI
-    /features   # Screen modules (Dashboard, Transactions, etc.)
-    /hooks      # usePaymentFlow, useTokenManager, useDmsLookup
-    /store      # Zustand slices
-  /config       # PM2, Nginx, systemd templates
-  /tests        # Jest + Supertest
-```
+### 3.3 Reversal Logic
+- Add **partial refund** support.
+- Managers can refund a fixed dollar amount without reversing the full invoice.
+- Refund records must preserve department context and original gateway reference.
 
-## 4. Application Structure and Navigation
+### 3.4 Admin Settings
+- Add **Merchant ID (MID) mapping**.
+- Admin can configure routing for:
+  - Parts payments
+  - Service payments
+  - Body Shop payments
+- Example use:
+  - `department_id = parts` → MID A
+  - `department_id = service` → MID B
 
-### 4.1 App shell
-- Persistent header
-  - Universal Search for DMS RO/VIN lookup
-  - Auth token status monitor for iPOSpays Bearer TTL
-  - Notifications hub for webhook alerts, batch sync status, and terminal drops
-- Sidebar navigation
-  - `/dashboard`
-  - `/transactions`
-  - `/customers`
-  - `/admin`
-- Main content area
-  - Payment Stepper modal with a strict four-step state machine
+### 3.5 Reporting
+- Add **DMS Sync Exception Report**.
+- This report shows payments that failed to post to the car system.
+- Required fields:
+  - RO number
+  - gateway transaction ID
+  - department
+  - amount
+  - failure reason
+  - retry status
+  - timestamp
 
-### 4.2 Route summary
-| Route | Purpose | Key Components |
-|---|---|---|
-| `/dashboard` | Live KPIs and recent activity | `<KpiGrid>`, `<SystemHealth>`, `<RecentTransactions>` |
-| `/transactions` | Historical ledger and reconciliation | `<DataGrid>`, export, retry post |
-| `/customers` | Card-on-file and recurring billing | `<TokenList>`, `<AddCardModal>` |
-| `/admin` | Policy, demo mode, and DMS configuration | `<SurchargeToggle>`, `<BatchTimePicker>`, `<DemoModeSwitch>` |
+### 3.6 Hardware Ops
+- Add **Terminal Heartbeat Monitor**.
+- Show terminal `Online` / `Offline` / `Unknown` in UI.
+- Track last heartbeat timestamp per terminal.
 
-### 4.3 Payment stepper state machine
-`idle → validating → processing → success | error | declined`
+## 4. External Integrations
 
-## 5. External Integrations
-
-### 5.1 DMS commands
+### 4.1 DMS commands
 | Command | Method | Endpoint Pattern | Notes |
 |---|---|---|---|
-| `FETCH_RO` | `GET` | `/repair-orders?search={query}` | Maps `totalAmountDue` to `amount_base`; returns `ro_number`, `vin`, `customer_name`, `status` |
-| `WRITE_BACK` | `POST` | `/accounting/journal-entry` | Sends `authCode`, `finalAmount`, `gateway_tx_id`; triggers RO closure |
+| `FETCH_RO` | `GET` | `/repair-orders?search={query}` | Returns header plus line-items array |
+| `WRITE_BACK` | `POST` | `/accounting/journal-entry` | Supports partial and final settlement posting |
 
-### 5.2 iPOSpays v3 gateway commands
-| Command | Method | Purpose | Key Payload / Notes |
-|---|---|---|---|
-| `AUTH_TOKEN` | `POST` | Get bearer token | `{ merchant_id, secret }` |
-| `C2D_SALE` | `POST` | Ping terminal / terminal sale | `{ tpn, amount, external_id: ro_number }` |
-| `FTD_TOKEN` | `POST` | Freedom-to-Design iframe handshake | Returns `paymentTokenId` for secure CoF |
-| `RECURRING_SALE` | `POST` | Stored-card charge | `{ cardToken, amount, description }` |
-| `VOID` | `POST` | Pre-batch reversal | Allowed before `auto_batch_time` |
-| `REFUND` | `POST` | Post-batch return | Requires `refund_surcharge` policy toggle |
+Example DMS fetch shape:
 
-### 5.3 Demo mode
-- Toggleable from Admin
-- Generates sample repair orders, fake transaction IDs, and demo receipt data
-- Allows product demonstrations without payment or DMS credentials
+```ts
+export interface DmsFetchResponse {
+  ro_number: string;
+  vin: string;
+  customer_name: string;
+  status: 'open' | 'closed';
+  totalAmountDue: number;
+  remainingBalance: number;
+  line_items: Array<{
+    line_id: string;
+    description: string;
+    department_id: string;
+    department_name: string;
+    amount: number;
+    category: 'parts' | 'service' | 'body_shop' | 'other';
+  }>;
+}
+```
 
-## 6. Business Logic and Admin Controls
+## 5. Business Logic
 
-### 6.1 Surcharge and refund policy
-- Enforced server-side
-- UI should show policy previews in Admin and Receipt screens
-- Suggested admin controls:
-  - `surcharge_pct` from `0.00` to `5.00`, default `3.00`
-  - `refund_surcharge` boolean toggle
-  - `auto_batch_time` time picker, default `02:00`
-- Validation via Zod
-- Super-admin role required for policy changes
-- Secrets encrypted at rest
+### 5.1 Partial payment
+- User may enter a custom payment amount up to remaining balance.
+- DMS write-back should indicate partial settlement when applicable.
 
-### 6.2 Batch cutoff: void vs refund
-- If `current_time < auto_batch_time`: use `VOID`
-- If `current_time >= auto_batch_time`: use `REFUND`
-- Must be enforced server-side
-- Never trust the client clock
-- `organizations.auto_batch_time` is tenant-configurable
+### 5.2 Partial refund
+- Manager may refund a fixed amount less than or equal to previously captured amount.
+- Refund UI and API should accept explicit amount values.
 
-### 6.3 Tokenization workflow
-- User opens `AddCardModal`
-- Frontend loads the iPOSpays FTD iframe
-- Iframe returns `paymentTokenId`
-- Backend executes a `$0.00` pre-auth to validate the token
-- Backend stores `card_token`, `last_four`, and `card_brand` in `customer_tokens`
-- PCI rule: the portal must never touch raw PAN data
+### 5.3 MID mapping
+- Payment routing should use department-aware MID selection.
+- When multiple departments exist on one RO, either:
+  - split by line-item department, or
+  - require explicit user-selected payment scope.
+- This starter repo models the config and routing target, but does not yet implement settlement splitting logic.
 
-## 7. Database Schema
+### 5.4 Terminal heartbeat
+- Backend stores latest heartbeat status per terminal.
+- Dashboard/Admin should surface heartbeat status for demos and operations.
+
+## 6. Database Requirements
+
+Transactions now require:
+- `department_id`
+- `line_items` JSONB
+- partial payment/refund reference fields
 
 See `specs/database/schema.sql`.
 
-## 8. Screen-by-Screen Implementation
+## 7. UI Requirements
 
-### 8.1 Dashboard (`/dashboard`)
-- Components: KPI grid, system health, recent transactions
-- Data source: TanStack Query polling `/api/v1/metrics`
-- Error handling: skeletons and retry toast on 5xx
+### 7.1 Payment stepper
+- Show line-item breakdown from DMS
+- Support custom payment amount
+- Support MID-aware routing preview
+- Receipt preview shows payment amount and remaining balance
 
-### 8.2 Transactions (`/transactions`)
-- Actions: Export CSV, Retry DMS post, View receipt
+### 7.2 Admin
+- Demo mode toggle
+- MID mapping editor
+- Terminal monitor
+- Sync exception view
 
-### 8.3 Customers (`/customers`)
-- Components: `<TokenListTable>`, `<AddCardModal>`
+### 7.3 Reporting
+- DMS Sync Exception Report page or panel for accounting operations
 
-### 8.4 Admin (`/admin`)
-- Tabs: Surcharge & Refund, Batch Schedule, DMS Credentials, Audit Log, Demo Mode
+## 8. Coding Agent Rules
 
-### 8.5 Payment stepper modal
-| Step | Component | API / Logic | Block Condition |
-|---|---|---|---|
-| 1. Confirm RO | `<ROLookupForm>` | `FETCH_RO` → validate `status=open` | RO closed/invalid |
-| 2. Select Method | `<PaymentMethodSelector>` | Calculate `amount_total` using `surcharge_pct` | None |
-| 3. Terminal / Token | `<TerminalPing>` or `<StoredCardSelector>` | `C2D_SALE` or `RECURRING_SALE` | TPN offline / token expired |
-| 4. Finalize | `<ReceiptPreviewCard>` | `WRITE_BACK` + receipt actions | Timeout / declined |
-
-## 9. Coding Agent Rules
-
-- Use **TypeScript strict mode**
-- Validate all external payloads with **Zod**
-- Use **TanStack Query** for async frontend data flows
-- Do not store PAN; store only token, last4, and brand
-- Webhook handling must be idempotent
-- Every mutation requires loading, error, and retry handling
-- Keep architecture single-instance ready
-- Do not alter API contracts or payment state machine without approval
-
-## 10. First Sprint Deliverables
-
-1. Nginx + PM2 + PostgreSQL setup script (`setup.sh`)
-2. Auth + RBAC route guards (`super_admin`, `cashier`)
-3. `/dashboard` + `/transactions` with mock data, ready for real API swap
-4. Payment Stepper steps 1–3 with stubbed iPOSpays and DMS clients
-5. Webhook endpoint with signature verification and idempotency
-6. Admin settings UI with server-side policy enforcement
+- Use TypeScript strict mode
+- Validate all external payloads with Zod
+- Preserve department context end-to-end
+- Do not remove partial payment/refund support
+- Keep demo mode available even when live credentials are missing

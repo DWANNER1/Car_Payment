@@ -14,7 +14,9 @@ export function ReceiptPreviewCard({ receipt }: { receipt: ReceiptPreview }) {
           <Typography color="text.secondary">RO: {receipt.roNumber}</Typography>
           <Typography color="text.secondary">Customer: {receipt.customerName}</Typography>
           <Typography color="text.secondary">Base: ${receipt.amountBase.toFixed(2)}</Typography>
-          <Typography color="text.secondary">Total: ${receipt.amountTotal.toFixed(2)}</Typography>
+          <Typography color="text.secondary">Paid Now: ${receipt.amountPaidNow.toFixed(2)}</Typography>
+          <Typography color="text.secondary">Remaining Balance: ${receipt.amountRemaining.toFixed(2)}</Typography>
+          <Typography color="text.secondary">Total on This Receipt: ${receipt.amountTotal.toFixed(2)}</Typography>
           <Typography color="text.secondary">Flow: {receipt.flow}</Typography>
           <Typography color="text.secondary">Reference: {receipt.reference}</Typography>
           <Alert severity="info">This starter preview supports print, email, and text demo actions.</Alert>
