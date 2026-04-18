@@ -4,6 +4,7 @@ import { fetchJson } from '../lib/api';
 export interface MidMapping {
   parts: string;
   service: string;
+  sales: string;
   body_shop: string;
 }
 

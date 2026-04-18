@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+*.log
+.DS_Store
+.vscode/
+src/api/dist/
+src/api/runtime/
+src/frontend/dist/
+src/api/**/*.js
+src/frontend/**/*.js
+src/shared/**/*.js
+src/**/*.map
+src/frontend/**/*.js
